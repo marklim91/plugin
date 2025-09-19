@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Plugin",
+  "version": "1.0.0",
+  "description": "Open the Plugin Dashboard as a full page tab from the toolbar action (dedup).",
+  "action": {
+    "default_title": "Open Plugin Dashboard"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "128": "icons/Plugin_Logo.png"
+  },
+  "permissions": ["tabs", "storage"],
+  "host_permissions": ["https://onesupport.crm.dynamics.com/*"]
+}

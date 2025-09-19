@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Plugin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light only" />
+    <style>
+      /* ====== Design Tokens ====== */
+      :root {
+        --color-header-bg: #e22b2b; /* 이미지의 강한 레드 톤에 맞춘 값 */
+        --color-header-text: #ffffff;
+        --color-bg: #ffffff;
+        --color-card-border: #e5e7eb; /* gray-200 */
+        --color-card-text: #111827; /* gray-900 */
+        --color-muted: #6b7280; /* gray-500 */
+        --color-button: #111827; /* 검정에 가까운 버튼 */
+        --color-button-text: #ffffff;
+        --radius: 12px;
+        --radius-sm: 8px;
+        --shadow: 0 6px 18px rgba(17, 24, 39, 0.08);
+        --focus: #2563eb;
+        --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter,
+          Helvetica, Arial, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      }
+
+      /* ====== Global Reset (적당히) ====== */
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--color-bg);
+        color: var(--color-card-text);
+        font-family: var(--font);
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
+      /* ====== Header ====== */
+      .app-header {
+        background: var(--color-header-bg);
+        color: var(--color-header-text);
+        padding: 28px 24px;
+      }
+      .app-header__title {
+        margin: 0 auto;
+        max-width: 1200px;
+        font-size: 28px; /* 이미지의 굵은 'Plugin' 크기 */
+        font-weight: 700;
+        letter-spacing: 0.2px;
+      }
+
+      /* ====== Page Container & Grid ====== */
+      /* Make the main container fit the viewport and scroll vertically */
+      .container {
+        max-width: 1200px;
+        margin: 24px auto 56px;
+        padding: 0 16px;
+        height: calc(
+          100vh - 120px
+        ); /* viewport height minus header + margins */
+        overflow-y: auto;
+      }
+      /* Grid with equal-height cells: force 2 rows of equal height on wide screens */
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        /* make the bottom row slightly taller so Case Summary & Zebra Insight appear larger, but not so tall that top cards get cut off */
+        grid-template-rows: 1fr 1.4fr; /* top row smaller, bottom row modestly larger */
+        grid-auto-rows: 1fr; /* ensure auto-placed rows also stretch reasonably */
+        gap: 20px;
+        align-items: stretch;
+        height: 100%; /* fill the container height so 1fr rows can divide it */
+      }
+      @media (max-width: 900px) {
+        .grid {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto; /* stacked rows flow naturally on small screens */
+          height: auto; /* allow page to grow vertically */
+        }
+      }
+
+      /* ====== Card ====== */
+      .card {
+        background: #fff;
+        border: 1px solid var(--color-card-border);
+        border-radius: var(--radius);
+        padding: 18px 18px 16px;
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column; /* allow header and body spacing */
+        height: 100%; /* let grid stretching make cards equal height */
+        min-height: 0; /* allow card content to shrink properly inside flex/grid */
+        overflow: hidden; /* prevent content from visually spilling out */
+      }
+      .card__title {
+        margin: 0 0 12px;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--color-card-text);
+      }
+      .card__section + .card__section {
+        margin-top: 12px;
+      }
+
+      /* Card sections: allow internal scrolling when content overflows the card
+         Use flex so sections can expand and then scroll internally without
+         making content overflow the card. */
+      .card__section {
+        flex: 1 1 auto;
+        min-height: 0; /* allow proper shrinking inside flex containers */
+        overflow: auto; /* scroll internally when content is larger than the card */
+      }
+
+      /* Specifically keep z-list styling but allow it to scroll internally */
+      .card__section.z-list {
+        overflow: auto;
+      }
+
+      /* ====== Forms ====== */
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-bottom: 12px;
+      }
+      .label {
+        font-size: 13px;
+        color: var(--color-muted);
+      }
+      .input {
+        border: 1px solid var(--color-card-border);
+        border-radius: var(--radius-sm);
+        padding: 10px 12px;
+        font-size: 14px;
+        color: var(--color-card-text);
+        background: #fff;
+        outline: none;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+      .input::placeholder {
+        color: #9ca3af;
+      }
+      .input:focus {
+        border-color: var(--focus);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 8px;
+      }
+      .btn {
+        appearance: none;
+        border: 0;
+        background: var(--color-button);
+        color: var(--color-button-text);
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.05s ease, opacity 0.15s ease;
+      }
+      .btn:hover {
+        opacity: 0.92;
+      }
+      .btn:active {
+        transform: translateY(1px);
+      }
+      .btn:focus-visible {
+        outline: 3px solid rgba(37, 99, 235, 0.35);
+        outline-offset: 2px;
+      }
+
+      .btn--link {
+        background: #111827;
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+      }
+
+      /* ====== Text Blocks ====== */
+      .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+      }
+      .kv {
+        white-space: pre-wrap; /* preserve newlines, but wrap long lines */
+        font-size: 14px;
+        word-break: break-word; /* break long words/URLs so they don't overflow */
+      }
+
+      /* For the Case Summary block, collapse source indentation while
+         preserving line breaks so child lines are not indented by HTML source */
+      #caseSummary.kv {
+        white-space: pre-line; /* collapse sequences of whitespace but keep line breaks */
+        margin: 0; /* ensure no extra margin */
+        padding: 0; /* content will be inside the card padding already */
+      }
+      .muted {
+        color: var(--color-muted);
+      }
+
+      /* Zebra AI list */
+      .z-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        font-size: 14px;
+      }
+      .z-list .item-title {
+        font-weight: 700;
+      }
+      .z-list ul {
+        margin: 6px 0 0 22px;
+      }
+      .chip {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        background: #f3f4f6;
+        color: #111827;
+      }
+
+      /* ====== Utility ====== */
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+      }
+
+      /* Kusto Explorer 서비스 버튼들 */
+      .service-buttons {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .service-btn {
+        background: #f3f4f6;
+        color: #374151;
+        border: 1px solid #d1d5db;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .service-btn:hover {
+        background: #e5e7eb;
+        border-color: #9ca3af;
+      }
+
+      .service-btn.active {
+        background: var(--color-button);
+        color: var(--color-button-text);
+        border-color: var(--color-button);
+      }
+
+      /* 파라미터 폼 */
+      .parameter-form {
+        margin: 16px 0;
+      }
+
+      .param-group {
+        display: none;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .param-group.active {
+        display: grid;
+      }
+
+      @media (max-width: 768px) {
+        .service-buttons {
+          flex-direction: column;
+        }
+
+        .param-group {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="app-header" role="banner">
+      <h1 class="app-header__title">Plugin</h1>
+    </header>
+
+    <!-- Main -->
+    <main class="container" role="main">
+      <section class="grid" aria-label="Main dashboard grid">
+        <!-- Case Search -->
+        <article class="card" aria-labelledby="case-search-title">
+          <h2 id="case-search-title" class="card__title">Case Search</h2>
+          <form
+            id="caseSearchForm"
+            class="card__section"
+            aria-describedby="case-search-help"
+          >
+            <p id="case-search-help" class="sr-only">
+              Enter case number and select SAP category to search.
+            </p>
+
+            <div class="field">
+              <label for="caseNumber" class="label">Case Number</label>
+              <input
+                id="caseNumber"
+                name="caseNumber"
+                class="input"
+                type="text"
+                placeholder="Enter case number"
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="field">
+              <label for="sap" class="label">SAP</label>
+              <!-- 이미지에서는 프리필 텍스트 형태이므로 text로 유지, 필요시 select로 교체 가능 -->
+              <input
+                id="sap"
+                name="sap"
+                class="input"
+                type="text"
+                value="Azure/Azure Database for MySQL flexible server/Performance"
+              />
+            </div>
+
+            <div class="actions">
+              <button type="submit" class="btn" aria-label="Search cases">
+                Search
+              </button>
+              <button type="reset" class="btn" aria-label="Clear fields">
+                Clear
+              </button>
+            </div>
+          </form>
+        </article>
+
+        <!-- Kusto Explorer -->
+        <article class="card" aria-labelledby="kusto-title">
+          <h2 id="kusto-title" class="card__title">Kusto Explorer</h2>
+          <div class="card__section">
+            <!-- 서비스 선택 버튼들 -->
+            <div class="service-buttons">
+              <button
+                id="mysqlBtn"
+                class="btn service-btn active"
+                data-service="mysql"
+              >
+                MySQL
+              </button>
+              <button
+                id="postgresqlBtn"
+                class="btn service-btn"
+                data-service="postgresql"
+              >
+                PostgreSQL
+              </button>
+
+              <button
+                id="pbiadfBtn"
+                class="btn service-btn"
+                data-service="pbiadf"
+              >
+                PBI/ADF
+              </button>
+            </div>
+
+            <!-- 파라미터 입력 폼 -->
+            <div class="parameter-form">
+              <!-- PostgreSQL 파라미터 -->
+              <div id="postgresql-params" class="param-group">
+                <div class="field">
+                  <label class="label">시간 범위</label>
+                  <select id="timeRange" class="input">
+                    <option value="PT1H">마지막 1시간</option>
+                    <option value="PT3H">마지막 3시간</option>
+                    <option value="PT24H">마지막 24시간</option>
+                    <option value="P7D">마지막 7일</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label class="label">Region</label>
+                  <input id="region" class="input" type="text" value="Korea" />
+                </div>
+                <div class="field">
+                  <label class="label">ServerName</label>
+                  <input
+                    id="serverName"
+                    class="input"
+                    type="text"
+                    placeholder="서버 이름 (기본값: no-selection)"
+                  />
+                </div>
+                <div class="field">
+                  <label class="label">VirtualMachineName</label>
+                  <input
+                    id="vmName"
+                    class="input"
+                    type="text"
+                    placeholder="VM 이름 (기본값: query-result)"
+                  />
+                </div>
+              </div>
+
+              <!-- MySQL 파라미터 -->
+              <div id="mysql-params" class="param-group active">
+                <div class="field">
+                  <label class="label">시간 범위</label>
+                  <select id="mysqlTimeRange" class="input">
+                    <option value="PT1H">마지막 1시간</option>
+                    <option value="PT3H">마지막 3시간</option>
+                    <option value="PT24H">마지막 24시간</option>
+                    <option value="P7D">마지막 7일</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label class="label">Region</label>
+                  <input
+                    id="mysqlRegion"
+                    class="input"
+                    type="text"
+                    value="SqlAzure.Korea"
+                  />
+                </div>
+                <div class="field">
+                  <label class="label">ServerName</label>
+                  <input
+                    id="mysqlServerName"
+                    class="input"
+                    type="text"
+                    placeholder="MySQL 서버 이름"
+                  />
+                </div>
+                <!-- <div class="field">
+                  <label class="label">VirtualMachineName</label>
+                  <input
+                    id="mysqlVmName"
+                    class="input"
+                    type="text"
+                    placeholder="VM 이름"
+                  />
+                </div> -->
+              </div>
+
+              <!-- PBI/ADF 파라미터 -->
+              <div id="pbiadf-params" class="param-group">
+                <div class="field">
+                  <label class="label">시간 범위</label>
+                  <select id="pbiadfTimeRange" class="input">
+                    <option value="PT1H">마지막 1시간</option>
+                    <option value="PT3H">마지막 3시간</option>
+                    <option value="PT24H">마지막 24시간</option>
+                    <option value="P7D">마지막 7일</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label class="label">Region</label>
+                  <input
+                    id="pbiadfRegion"
+                    class="input"
+                    type="text"
+                    value="Korea"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- 대시보드 열기 버튼 -->
+            <div class="actions">
+              <button id="openDashboard" class="btn btn--link">
+                <span>Go to Dashboard</span>
+                <span aria-hidden="true">→</span>
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Case Summary -->
+        <article
+          id="caseSummaryCard"
+          class="card"
+          aria-labelledby="summary-title"
+        >
+          <h2 id="summary-title" class="card__title">Case Summary</h2>
+          <!-- initially empty; populated when the user clicks Search -->
+          <div id="caseSummary" class="card__section kv mono"></div>
+        </article>
+
+        <!-- First Insight (replaces Zebra AI) -->
+        <article class="card" aria-labelledby="zebra-title">
+          <h2 id="zebra-title" class="card__title">Zebra AI Insight</h2>
+
+          <!-- initially empty; populated when Search is clicked -->
+          <div id="zebraInsight" class="card__section z-list"></div>
+        </article>
+
+        <!-- Hidden templates: keep the original content here and inject on Search -->
+        <template id="caseSummaryTemplate">
+          <div>
+            <strong>SAP:</strong> Azure/Azure Database for MySQL flexible
+            server/Performance<br />
+            <strong>Resource ID:</strong>
+            subscriptions/{$PII}/resourceGroups/mysql-test-kc/providers/Microsoft.DBforMySQL/flexibleServers/twcha-mysql80-kc-ha<br />
+            <strong>Issue Start Time:</strong> UTC 2025-09-17 03:00<br />
+            <strong>Issue End Time:</strong> UTC 2025-09-17 04:00<br />
+            <strong>Customer Statements:</strong> We experienced 100% CPU usage
+            between KST 2025-09-17 12:00 and 13:00. Please provide the RCA for
+            this symptom.
+          </div>
+        </template>
+
+        <template id="zebraTemplate">
+          <div>
+            <div class="item-title">Given the symptoms:</div>
+            <div class="kv">
+              Period: 2025-09-17 03:00–04:00 UTC 100% CPU Connections ↑ +
+              Threads ↑ Slow queries ↑ DML not increased
+            </div>
+          </div>
+
+          <div>
+            <div class="item-title">Initial Interpretation</div>
+            <div class="kv">
+              If DML (INSERT/UPDATE/DELETE) didn’t increase, but connections,
+              threads, and slow queries did, the spike may be due to read-heavy
+              workload (SELECTs), possibly triggered by: - Application storm
+              (unexpected client behavior or retry loops) - Inefficient queries
+              (missing indexes, big scans) - Blocking / lock waits causing
+              thread buildup - External script/report/ETL job hitting the DB -
+              Connection pool misuse (too many connections built at once) Slow
+              queries aren’t necessarily volume-related — a single bad query or
+              blocked query can cascade.
+            </div>
+          </div>
+
+          <div>
+            <div class="item-title">How to Scope This Case</div>
+            <div class="kv">
+              You want to narrow down cause → impact → resolution.
+            </div>
+          </div>
+
+          <div>
+            <div class="item-title">1. Confirm the Impact Window</div>
+            <div class="kv">
+              Use Azure Monitor or Query Store or MySQL performance_schema
+              metrics to validate the spike started and ended exactly in that
+              window. Confirm whether CPU stayed flat at 100% or had cyclical
+              spikes — sustained 100% means threads were not yielding.
+            </div>
+          </div>
+
+          <div>
+            <div class="item-title">2. Check Workload Type</div>
+            <div class="kv">
+              Since DML didn’t go up: Were SELECTs (reads) increasing? Did
+              queries change in execution plan? Use MySQL query performance
+              metrics (sys.schema_table_statistics,
+              events_statements_summary_by_digest) Compare top queries from
+              02:00–03:00 vs. 03:00–04:00 vs. a healthy period.
+            </div>
+          </div>
+
+          <div>
+            <div class="item-title">3. Look for Contention</div>
+            <div class="kv">
+              High CPU & slow queries can be from: - Locks (InnoDB row locks,
+              metadata locks) - Disk I/O waits → Check performance_schema
+              tables: SELECT * FROM sys.schema_table_lock_waits; SELECT * FROM
+              sys.innodb_lock_waits; If many threads are waiting for locks, DML
+              count may appear same — but overall TPS slows.
+            </div>
+          </div>
+
+          <div>
+            <div class="item-title">
+              4. Correlate Connections and Thread Activities
+            </div>
+            <div class="kv">
+              During that hour: Were new connections coming from the same source
+              IP? (sys.processlist or Azure diagnostics) Was there a connection
+              storm? Could the connection pool size have been exceeded?
+            </div>
+          </div>
+
+          <div>
+            <div class="item-title">5. Look for Resource Bottlenecks</div>
+            <div class="kv">
+              CPU 100% could be due to query execution or thread scheduling
+              overload. Check buffer pool hit ratio, temp space usage. See if
+              table scans increased (missing indexes or bad query plans could
+              appear suddenly due to stale statistics).
+            </div>
+          </div>
+
+          <div>
+            <div class="item-title">6. Timeline Correlation</div>
+            <div class="kv">
+              Overlay: CPU usage Connections count Slow queries count Lock waits
+              count Specific top queries slowest by digest This often reveals:
+              "At 03:05 a single SELECT without index scan started running on
+              huge table; more threads piled on; CPU maxed until connection pool
+              blocked."
+            </div>
+          </div>
+
+          <div>
+            <div class="item-title">Suggested immediate next step</div>
+            <div class="kv">
+              Extract top SQL statements (digest + count, avg execution time)
+              from performance_schema.events_statements_summary_by_digest for
+              the window 2025-09-17 03:00-04:00 UTC and compare with a baseline
+              hour. That way, you either confirm: - A change in query pattern,
+              or - Lock wait pattern is the cause.
+            </div>
+          </div>
+
+          <div>
+            <div class="item-title">✅ Summary</div>
+            <div class="kv">
+              Even though DML didn’t increase, read queries might have jumped or
+              become slower (due to plan change or resource contention), causing
+              threads and slow queries to pile up and CPU to hit 100%. Scope the
+              case by correlating top queries, waits, and connection sources in
+              the affected time vs. baseline.
+            </div>
+          </div>
+        </template>
+      </section>
+    </main>
+
+    <!-- External script to comply with CSP -->
+    <script src="plugin-dashboard.js"></script>
+  </body>
+</html>
